@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Usman Oil Traders
 
-## Getting Started
+Foundation for the Usman Oil Traders e-commerce and shop-management system in Kot Samaba, Rahim Yar Khan, Punjab, Pakistan.
 
-First, run the development server:
+This repository contains the project foundation and Phase 2 database schema only. Authentication, product/catalog functionality, inventory workflows, POS, orders, payments, reporting, and all other business features are intentionally not implemented yet.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+The Phase 1 architecture is documented in [docs/architecture.md](docs/architecture.md). It is the repository's implementation reference for future phases and records the current conformance review.
+
+The Phase 2 relational design and seed instructions are documented in [docs/database-schema.md](docs/database-schema.md).
+
+## Stack
+
+- Next.js App Router, React, and TypeScript
+- Tailwind CSS v4 and shadcn/ui
+- PostgreSQL with Prisma
+- Zod for future input validation
+
+## Current folder layout
+
+```text
+app/                 Next.js routes, layouts, and global styles
+components/          Reusable UI; shadcn/ui components live in components/ui/
+lib/                 Shared server and client utilities
+lib/auth/            Reserved for authentication and authorization code
+lib/services/        Reserved for business-domain services
+lib/validation/      Reserved for Zod schemas and input validation
+prisma/              Prisma schema and future migrations
+types/               Shared TypeScript types
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The `@/*` TypeScript alias maps to the repository root, for example `@/components` and `@/lib`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env` and set `DATABASE_URL` to the production or local PostgreSQL connection string. `.env` files are ignored by Git.
 
-## Learn More
+`prisma.config.ts` loads `DATABASE_URL` from the environment and configures Prisma to use PostgreSQL. The initial Prisma schema intentionally has no domain models or migrations.
 
-To learn more about Next.js, take a look at the following resources:
+The example file also reserves variables for future Auth.js, Redis, object storage (Cloudflare R2/S3), and WhatsApp handoff work. They are not active yet.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run dev          # Start the development server
+npm run lint         # Run ESLint
+npm run build        # Create a production build
+npx prisma generate  # Generate Prisma client after schema changes
+```
 
-## Deploy on Vercel
+## Security boundary for future work
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+When admin and staff features are implemented, financial fields such as purchase price and profit must be selected and serialized only for `SUPER_ADMIN`. Staff-facing API responses must not include them.
