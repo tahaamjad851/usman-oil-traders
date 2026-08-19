@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 
 import { useCart } from "@/lib/cart/CartContext";
 
@@ -9,6 +10,7 @@ type PlacedOrderSummary = {
   orderNumber: string;
   websiteSubtotal: string;
   items: Array<{ productName: string; quantity: number; lineTotal: string }>;
+  whatsappLink: string | null;
 };
 
 const inputClass =
@@ -91,9 +93,26 @@ export default function CheckoutPage() {
           </p>
         </div>
 
-        <p className="mt-6 text-sm text-shop-muted">
-          Thanks! We&apos;ll contact you on WhatsApp shortly to confirm your order.
-        </p>
+        {placedOrder.whatsappLink ? (
+          <>
+            <a
+              href={placedOrder.whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-shop-green py-3 font-medium text-shop-bg transition hover:bg-shop-green/90"
+            >
+              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+              Continue on WhatsApp
+            </a>
+            <p className="mt-3 text-xs text-shop-muted">
+              Tapping this opens WhatsApp with your order details pre-filled — just hit send.
+            </p>
+          </>
+        ) : (
+          <p className="mt-6 text-sm text-shop-muted">
+            Thanks! We&apos;ll contact you on WhatsApp shortly to confirm your order.
+          </p>
+        )}
         <Link href="/products" className="mt-4 inline-block text-sm text-shop-red hover:underline">
           Continue shopping
         </Link>

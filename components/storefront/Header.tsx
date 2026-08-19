@@ -7,6 +7,7 @@ import { CartIcon } from "./CartIcon";
 
 export async function Header() {
   const whatsapp = await getWhatsAppNumber();
+  const whatsappHref = whatsapp ? whatsAppLink(whatsapp) : null;
 
   return (
     <header className="sticky top-0 z-50 border-b border-shop-ink/5 bg-shop-surface/95 backdrop-blur">
@@ -36,9 +37,9 @@ export async function Header() {
           </div>
         </form>
 
-        {whatsapp ? (
+        {whatsappHref ? (
           <a
-            href={whatsAppLink(whatsapp)}
+            href={whatsappHref}
             target="_blank"
             rel="noopener noreferrer"
             className="flex shrink-0 items-center gap-2 rounded-full bg-shop-green/10 px-4 py-2 text-sm font-medium text-shop-green transition hover:bg-shop-green/20"

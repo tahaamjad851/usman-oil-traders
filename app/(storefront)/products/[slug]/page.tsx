@@ -60,6 +60,7 @@ export default async function ProductDetailPage({
 
   const image = product.images[0];
   const inquiryMessage = `Hi, I'm interested in ${product.name} — is it available?`;
+  const whatsappHref = whatsapp ? whatsAppLink(whatsapp, inquiryMessage) : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -130,9 +131,9 @@ export default async function ProductDetailPage({
               stockStatus={product.stockStatus}
             />
 
-            {whatsapp ? (
+            {whatsappHref ? (
               <a
-                href={whatsAppLink(whatsapp, inquiryMessage)}
+                href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm text-shop-green hover:underline"

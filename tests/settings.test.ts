@@ -46,13 +46,19 @@ describe("getWhatsAppNumber", () => {
 });
 
 describe("whatsAppLink", () => {
-  it("strips non-digit characters and builds a wa.me link", () => {
+  it("normalizes the number (via toWhatsAppNumber) and builds a wa.me link", () => {
     expect(whatsAppLink("+92 300 1234567")).toBe("https://wa.me/923001234567");
+    expect(whatsAppLink("0300-1234567")).toBe("https://wa.me/923001234567");
   });
 
   it("URL-encodes an optional prefilled message", () => {
     expect(whatsAppLink("923001234567", "Hi there!")).toBe(
       "https://wa.me/923001234567?text=Hi%20there!",
     );
+  });
+
+  it("returns null instead of a broken URL when the number doesn't normalize", () => {
+    expect(whatsAppLink("not a phone number")).toBeNull();
+    expect(whatsAppLink("12345")).toBeNull();
   });
 });

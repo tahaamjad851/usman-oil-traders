@@ -3,8 +3,11 @@ import { redirect } from "next/navigation";
 import { PasswordChangeRequiredError } from "@/lib/auth/guard";
 import { getAuthContext } from "@/lib/auth/session";
 import { getOrder } from "@/lib/services/order.service";
+import { toWhatsAppNumber } from "@/lib/utils/phone";
+import { buildStaffContactMessage } from "@/lib/services/whatsapp-message.service";
 
 import { OrderStatusForm } from "./status-form";
+import { WhatsAppCustomerButton } from "./whatsapp-button";
 
 type OrderItemRow = { id: string; productName: string; quantity: number; unitPrice: string; lineTotal: string };
 
@@ -42,6 +45,12 @@ export default async function AdminOrderDetailPage({
   const { id } = await params;
   const order = (await getOrder(ctx, id)) as OrderDetail;
 
+  const staffMessage = buildStaffContactMessage(order);
+  const normalizedCustomerNumber = toWhatsAppNumber(order.customerPhone);
+  const customerWhatsappLink = normalizedCustomerNumber
+    ? `https://wa.me/${normalizedCustomerNumber}?text=${encodeURIComponent(staffMessage)}`
+    : null;
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <div>
@@ -58,6 +67,28 @@ export default async function AdminOrderDetailPage({
         {order.customerAddress ? <p className="text-muted-foreground">{order.customerAddress}</p> : null}
         {order.customerNotes ? (
           <p className="mt-2 text-muted-foreground">Notes: {order.customerNotes}</p>
+        ) : null}
+
+        <div className="mt-4">
+          {customerWhatsappLink ? (
+            <WhatsAppCustomerButton
+              orderId={order.id}
+              currentStatus={order.status}
+              whatsappLink={customerWhatsappLink}
+            />
+          ) : (
+            <p className="text-xs text-destructive">
+              &quot;{order.customerPhone}&quot; doesn&apos;t look like a valid Pakistani mobile
+              number — can&apos;t generate a WhatsApp link.
+            </p>
+          )}
+        </div>
+
+        {customerWhatsappLink ? (
+          <details className="mt-3 text-xs text-muted-foreground">
+            <summary className="cursor-pointer">Preview message</summary>
+            <pre className="mt-2 whitespace-pre-wrap rounded-md border bg-muted/30 p-2">{staffMessage}</pre>
+          </details>
         ) : null}
       </section>
 

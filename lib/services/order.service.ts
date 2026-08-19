@@ -47,7 +47,13 @@ export type OrderCreateClient = {
     create: (args: {
       data: Record<string, unknown>;
       include: { items: true };
-    }) => Promise<Record<string, unknown> & { id: string; orderNumber: string }>;
+    }) => Promise<
+      Record<string, unknown> & {
+        id: string;
+        orderNumber: string;
+        items: Array<{ productName: string; quantity: number }>;
+      }
+    >;
   };
 };
 

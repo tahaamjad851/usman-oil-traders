@@ -4,6 +4,7 @@ import { getWhatsAppNumber, whatsAppLink } from "@/lib/services/settings.service
 
 export async function Footer() {
   const whatsapp = await getWhatsAppNumber();
+  const whatsappHref = whatsapp ? whatsAppLink(whatsapp) : null;
 
   return (
     <footer className="border-t border-shop-ink/5 bg-shop-surface">
@@ -18,9 +19,9 @@ export async function Footer() {
           </div>
           <div>
             <h2 className="font-shop-display text-lg uppercase tracking-wide text-shop-ink">Get in touch</h2>
-            {whatsapp ? (
+            {whatsappHref ? (
               <a
-                href={whatsAppLink(whatsapp)}
+                href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center gap-2 text-sm text-shop-green hover:underline"

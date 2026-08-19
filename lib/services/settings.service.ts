@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { toWhatsAppNumber } from "@/lib/utils/phone";
 
 type SettingRecord = { key: string; value: string; isPublic: boolean };
 
@@ -27,8 +28,12 @@ export async function getWhatsAppNumber(reader?: SettingsReader): Promise<string
   return fromSettings ?? process.env.WHATSAPP_BUSINESS_PHONE ?? null;
 }
 
-export function whatsAppLink(number: string, message?: string): string {
-  const digitsOnly = number.replace(/[^\d]/g, "");
+// Returns null (never a malformed URL) when the number doesn't normalize to a valid Pakistani
+// mobile number — callers must handle that by not rendering the link, per the "never generate a
+// broken wa.me link" rule.
+export function whatsAppLink(number: string, message?: string): string | null {
+  const normalized = toWhatsAppNumber(number);
+  if (!normalized) return null;
   const query = message ? `?text=${encodeURIComponent(message)}` : "";
-  return `https://wa.me/${digitsOnly}${query}`;
+  return `https://wa.me/${normalized}${query}`;
 }

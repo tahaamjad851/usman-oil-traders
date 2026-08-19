@@ -51,11 +51,14 @@ function fakeOrderCreateClient(products: typeof productA[] = [productA]) {
     order: {
       create: vi.fn(async (args: { data: Record<string, unknown> }) => {
         orderCreateArgs.push(args.data);
+        const items =
+          (args.data.items as { create: Array<{ productName: string; quantity: number }> } | undefined)
+            ?.create ?? [];
         return {
           id: "order-1",
           orderNumber: "UOT-10001",
           ...args.data,
-          items: (args.data.items as { create: unknown[] } | undefined)?.create ?? [],
+          items,
         };
       }),
     },
