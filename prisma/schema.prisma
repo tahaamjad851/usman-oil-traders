@@ -101,7 +101,8 @@ model User {
   localSales          LocalSale[]
   paymentsReceived    Payment[]              @relation("PaymentReceivedBy")
   paymentsVoided      Payment[]              @relation("PaymentVoidedBy")
-  expensesCreated     Expense[]
+  expensesCreated     Expense[]              @relation("ExpenseCreatedBy")
+  expensesDeleted     Expense[]              @relation("ExpenseDeletedBy")
   orderAmountConfirms Order[]                @relation("OrderConfirmedBy")
 
   @@index([role])
@@ -466,13 +467,24 @@ model Expense {
   amount      Decimal         @db.Decimal(12, 2)
   date        DateTime
   description String?
-  createdById String
-  createdAt   DateTime        @default(now())
+  // Optional receipt/scan reference — reuses Phase 4's R2/S3 storage wrapper (lib/storage.ts)
+  // rather than a new upload pipeline; no thumbnail generation, since a receipt has no listing
+  // grid to render into.
+  attachmentUrl String?
+  createdById   String
+  createdAt     DateTime        @default(now())
+  // Expenses are financial records — soft-deleted only (deletedAt set), consistent with
+  // Payment.voidedAt from Phase 10 and the isActive pattern on Product/Customer/Supplier. Never
+  // hard-deleted, so the original entry (and who recorded it) is never actually lost.
+  deletedAt     DateTime?
+  deletedById   String?
 
-  createdBy User @relation(fields: [createdById], references: [id])
+  createdBy User  @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  deletedBy User? @relation("ExpenseDeletedBy", fields: [deletedById], references: [id])
 
   @@index([category])
   @@index([date])
+  @@index([deletedAt])
 }
 
 model AuditLog {
