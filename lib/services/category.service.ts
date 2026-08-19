@@ -90,8 +90,10 @@ export async function listCategories(
   client: CategoryClient = prisma as unknown as CategoryClient,
 ) {
   // Public read — no auth required; the storefront needs this for navigation/filters.
+  // parentId: null keeps this a genuine top-level tree (each row's own `children` are nested
+  // underneath it) rather than a flat list with subcategories duplicated as siblings.
   return client.category.findMany({
-    where: { isActive: true },
+    where: { isActive: true, parentId: null },
     include: { children: { where: { isActive: true } } },
     orderBy: { name: "asc" },
   });

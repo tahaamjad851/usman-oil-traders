@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ForbiddenError, ValidationError } from "@/lib/auth/guard";
-import { assertAllowedCategoryName, createCategory, updateCategory } from "@/lib/services/category.service";
+import {
+  assertAllowedCategoryName,
+  createCategory,
+  listCategories,
+  updateCategory,
+} from "@/lib/services/category.service";
 import type { AuthContext } from "@/types/auth";
 
 const staff: AuthContext = {
@@ -26,7 +31,10 @@ function fakeCategoryClient() {
         name: (args.data.name as string) ?? "Engine Oils",
         slug: (args.data.slug as string) ?? "engine-oils",
       })),
-      findMany: vi.fn(async () => []),
+      findMany: vi.fn(async (args: Record<string, unknown>) => {
+        void args;
+        return [] as never[];
+      }),
     },
     auditLog: {
       create: vi.fn(async (args: { data: Record<string, unknown> }) => args.data),
@@ -79,5 +87,16 @@ describe("category authorization", () => {
     const client = fakeCategoryClient();
     const category = await createCategory(admin, { name: "Engine Oils", slug: "engine-oils" }, client);
     expect(category).toMatchObject({ name: "Engine Oils", slug: "engine-oils" });
+  });
+});
+
+describe("listCategories", () => {
+  it("only queries top-level categories, so children come back nested rather than duplicated as siblings", async () => {
+    const client = fakeCategoryClient();
+    await listCategories(client);
+
+    expect(client.category.findMany.mock.calls[0][0]).toMatchObject({
+      where: { isActive: true, parentId: null },
+    });
   });
 });

@@ -46,6 +46,20 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Public storefront brand palette — deliberately namespaced "shop-*" so it never collides
+     with (or gets confused for) the shadcn semantic tokens the admin dashboard uses above. */
+  --color-shop-bg: #0b0f14;
+  --color-shop-surface: #151b23;
+  --color-shop-card: #1c242e;
+  --color-shop-red: #e53935;
+  --color-shop-amber: #f59e0b;
+  --color-shop-green: #22c55e;
+  --color-shop-ink: #f5f7fa;
+  --color-shop-muted: #9ca3af;
+  --font-shop-display: var(--font-oswald), sans-serif;
+  --font-shop-body: var(--font-inter), sans-serif;
+  --font-shop-mono: var(--font-plex-mono), monospace;
 }
 
 :root {

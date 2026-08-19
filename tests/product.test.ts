@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ForbiddenError, ValidationError } from "@/lib/auth/guard";
 import {
+  computeStockStatus,
   createProduct,
   discontinueProduct,
+  getProductBySlug,
   listProducts,
   toPublicProduct,
   updateProduct,
@@ -168,7 +170,70 @@ describe("public and staff response shaping", () => {
     expect(shaped).toHaveProperty("retailPrice", baseProduct.retailPrice);
   });
 
-  it("listProducts only returns ACTIVE products for anonymous visitors regardless of the requested status", async () => {
+  it("never exposes exact stockQuantity or minimumStock to anonymous visitors — only a derived status", () => {
+    const shaped = toPublicProduct(fullProduct);
+    expect(shaped).not.toHaveProperty("stockQuantity");
+    expect(shaped).not.toHaveProperty("minimumStock");
+    expect(shaped).toHaveProperty("stockStatus", "IN_STOCK");
+  });
+});
+
+describe("computeStockStatus", () => {
+  it("reports OUT_OF_STOCK at zero or below", () => {
+    expect(computeStockStatus(0, 5)).toBe("OUT_OF_STOCK");
+    expect(computeStockStatus(-1, 5)).toBe("OUT_OF_STOCK");
+  });
+
+  it("reports LOW_STOCK at or under the minimum, but above zero", () => {
+    expect(computeStockStatus(5, 5)).toBe("LOW_STOCK");
+    expect(computeStockStatus(1, 5)).toBe("LOW_STOCK");
+  });
+
+  it("reports IN_STOCK above the minimum", () => {
+    expect(computeStockStatus(6, 5)).toBe("IN_STOCK");
+  });
+});
+
+describe("getProductBySlug", () => {
+  const activeProduct = { id: "product-1", ...baseProduct, status: "ACTIVE" };
+  const discontinuedProduct = { id: "product-2", ...baseProduct, status: "DISCONTINUED" };
+
+  it("returns null when no product matches the slug", async () => {
+    const result = await getProductBySlug(null, "missing-slug", { findUnique: async () => null });
+    expect(result).toBeNull();
+  });
+
+  it("returns the shaped product for an anonymous visitor when it is ACTIVE", async () => {
+    const result = await getProductBySlug(null, activeProduct.slug, {
+      findUnique: async () => activeProduct,
+    });
+    expect(result).not.toBeNull();
+    expect(result).not.toHaveProperty("purchasePrice");
+  });
+
+  it("hides a DISCONTINUED product from anonymous visitors (404, not just cost-stripped)", async () => {
+    const result = await getProductBySlug(null, discontinuedProduct.slug, {
+      findUnique: async () => discontinuedProduct,
+    });
+    expect(result).toBeNull();
+  });
+
+  it("still lets an authenticated admin open a DISCONTINUED product", async () => {
+    const admin: AuthContext = {
+      userId: "admin-1",
+      username: "admin",
+      role: "SUPER_ADMIN",
+      mustChangePassword: false,
+    };
+    const result = await getProductBySlug(admin, discontinuedProduct.slug, {
+      findUnique: async () => discontinuedProduct,
+    });
+    expect(result).not.toBeNull();
+  });
+});
+
+describe("listProducts public filtering", () => {
+  it("only returns ACTIVE products for anonymous visitors regardless of the requested status", async () => {
     const findMany = vi.fn(async (args: Record<string, unknown>) => {
       void args;
       return [] as never[];

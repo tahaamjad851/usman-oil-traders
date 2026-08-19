@@ -16,6 +16,9 @@ type ProductRecord = Record<string, unknown> & {
 
 // Storefront visitors never see cost, tier pricing they aren't eligible for, or the supplier link.
 const PUBLIC_HIDDEN_FIELDS = ["purchasePrice", "mechanicPrice", "wholesalePrice", "supplierId"] as const;
+// Exact counts are an operational detail, not customer-facing information — the public site
+// only ever shows a derived status (see computeStockStatus / toPublicProduct below).
+const PUBLIC_HIDDEN_STOCK_FIELDS = ["stockQuantity", "minimumStock"] as const;
 // Staff sell at the prices set for them but must never learn what the shop paid.
 const STAFF_HIDDEN_FIELDS = ["purchasePrice"] as const;
 
@@ -25,20 +28,36 @@ function omit<T extends Record<string, unknown>>(record: T, fields: readonly str
   return clone as T;
 }
 
+export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+
+export function computeStockStatus(stockQuantity: number, minimumStock: number): StockStatus {
+  if (stockQuantity <= 0) return "OUT_OF_STOCK";
+  if (stockQuantity <= minimumStock) return "LOW_STOCK";
+  return "IN_STOCK";
+}
+
 export function toStaffSafeProduct<T extends ProductRecord>(product: T): T {
   return omit(product, STAFF_HIDDEN_FIELDS);
 }
 
-export function toPublicProduct<T extends ProductRecord>(product: T): T {
-  return omit(product, PUBLIC_HIDDEN_FIELDS);
+export function toPublicProduct<T extends ProductRecord & { stockQuantity: number; minimumStock: number }>(
+  product: T,
+) {
+  const stockStatus = computeStockStatus(Number(product.stockQuantity), Number(product.minimumStock));
+  const withoutHiddenFields = omit(omit(product, PUBLIC_HIDDEN_FIELDS), PUBLIC_HIDDEN_STOCK_FIELDS);
+  return { ...withoutHiddenFields, stockStatus };
 }
 
-function shapeProduct<T extends ProductRecord>(ctx: AuthContext | null, product: T): T {
-  if (!ctx) return toPublicProduct(product);
+function shapeProduct<T extends ProductRecord>(ctx: AuthContext | null, product: T) {
+  // Every real caller reads full Product rows (stockQuantity/minimumStock are non-nullable
+  // columns), so this bridges the gap between that runtime guarantee and the looser ProductRecord
+  // constraint kept on the reader/lister types above for backward compatibility with existing
+  // test doubles that don't need those fields (they only ever exercise the staff/admin path).
+  if (!ctx) return toPublicProduct(product as T & { stockQuantity: number; minimumStock: number });
   return ctx.role === "SUPER_ADMIN" ? product : toStaffSafeProduct(product);
 }
 
-function shapeProducts<T extends ProductRecord>(ctx: AuthContext | null, products: T[]): T[] {
+function shapeProducts<T extends ProductRecord>(ctx: AuthContext | null, products: T[]) {
   return products.map((product) => shapeProduct(ctx, product));
 }
 
@@ -62,6 +81,32 @@ export async function getProduct(
     include: PRODUCT_INCLUDE,
   });
 
+  return shapeProduct(ctx, product);
+}
+
+type SlugProductReader = {
+  findUnique: (args: { where: { slug: string }; include?: unknown }) => Promise<ProductRecord | null>;
+};
+
+// The public product detail page routes by slug, not id — unlike getProduct(), a missing slug is
+// an expected, common case (bad link, stale bookmark) so this returns null instead of throwing,
+// letting the page call notFound() and render a normal 404 rather than an unhandled error.
+export async function getProductBySlug(
+  ctx: AuthContext | null,
+  slug: string,
+  productReader: SlugProductReader = prisma.product as unknown as SlugProductReader,
+) {
+  const product = await productReader.findUnique({
+    where: { slug },
+    include: PRODUCT_INCLUDE,
+  });
+
+  if (!product) return null;
+  // Matches listProducts()/buildProductWhere(): the public catalog only ever shows ACTIVE
+  // products, so a DISCONTINUED or INACTIVE product's detail page 404s for anonymous visitors
+  // (an authenticated admin/staff caller can still open it — the type of `product.status` is
+  // known at runtime even though the loose ProductRecord type doesn't declare it).
+  if (!ctx && (product as { status?: string }).status !== "ACTIVE") return null;
   return shapeProduct(ctx, product);
 }
 
