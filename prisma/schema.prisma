@@ -61,6 +61,8 @@ enum InventoryTransactionType {
   ORDER_CANCELLATION
   RETURN
   MANUAL_ADJUSTMENT
+  DAMAGE
+  TRANSFER
 }
 
 enum ExpenseCategory {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const decimalString = z
+export const decimalString = z
   .string()
   .regex(/^\d+(?:\.\d{1,2})?$/, "Must be a non-negative number with up to 2 decimal places.");
 
