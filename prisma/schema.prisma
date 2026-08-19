@@ -429,6 +429,9 @@ model Payment {
   customerId           String?
   amount               Decimal       @db.Decimal(12, 2)
   method               PaymentMethod
+  // Cash tendered at a POS sale — nullable because it only applies to CASH payments; change due
+  // is always derived (amountTendered - amount) rather than stored separately.
+  amountTendered       Decimal?      @db.Decimal(12, 2)
   transactionReference String?
   status               PaymentStatus @default(RECEIVED)
   receivedById         String
@@ -494,5 +497,12 @@ model Settings {
 model OrderSequence {
   id        Int      @id @default(1)
   nextValue Int      @default(10001)
+  updatedAt DateTime @updatedAt
+}
+
+// Same pattern as OrderSequence, backing sequential "LS-XXXXX" POS sale numbers.
+model LocalSaleSequence {
+  id        Int      @id @default(1)
+  nextValue Int      @default(1)
   updatedAt DateTime @updatedAt
 }
