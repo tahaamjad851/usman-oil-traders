@@ -99,7 +99,8 @@ model User {
   inventoryTxns       InventoryTransaction[]
   purchasesCreated    Purchase[]
   localSales          LocalSale[]
-  paymentsReceived    Payment[]
+  paymentsReceived    Payment[]              @relation("PaymentReceivedBy")
+  paymentsVoided      Payment[]              @relation("PaymentVoidedBy")
   expensesCreated     Expense[]
   orderAmountConfirms Order[]                @relation("OrderConfirmedBy")
 
@@ -438,14 +439,24 @@ model Payment {
   receivedAt           DateTime      @default(now())
   notes                String?
   createdAt            DateTime      @default(now())
+  // Payments are immutable financial records — a mistaken entry is voided (reason kept,
+  // original amount/method/receivedBy untouched), never hard-deleted. Kept as its own
+  // voidedAt/voidedById/voidReason trio rather than overloading `status`, since a payment that
+  // was genuinely received and then voided for a data-entry correction is a different fact from
+  // one that was PENDING or FAILED outright.
+  voidedAt             DateTime?
+  voidedById           String?
+  voidReason           String?
 
   order      Order?     @relation(fields: [orderId], references: [id])
   localSale  LocalSale? @relation(fields: [localSaleId], references: [id])
-  receivedBy User       @relation(fields: [receivedById], references: [id])
+  receivedBy User       @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+  voidedBy   User?      @relation("PaymentVoidedBy", fields: [voidedById], references: [id])
 
   @@index([orderId])
   @@index([localSaleId])
   @@index([status])
+  @@index([voidedAt])
   @@index([receivedAt])
 }
 

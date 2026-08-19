@@ -134,6 +134,7 @@ function fakeOrderStatusClient(order: {
   websiteSubtotal: unknown;
   items: Array<{ productId: string; productName: string; quantity: number }>;
 }) {
+  let currentOrder = { ...order };
   const stockByProduct = new Map(order.items.map((item, index) => [item.productId, 10 - index]));
   const inventoryTxns: Record<string, unknown>[] = [];
   const auditLogs: Record<string, unknown>[] = [];
@@ -141,10 +142,14 @@ function fakeOrderStatusClient(order: {
 
   const client: TransactionalOrderStatusClient = {
     order: {
-      findUniqueOrThrow: vi.fn(async () => order),
+      // Mutable, unlike the other fake clients in this file — this one specifically supports
+      // multiple sequential updateOrderStatus() calls in a single test observing each other's
+      // effects (see the backward-transition test), which a frozen closure snapshot can't do.
+      findUniqueOrThrow: vi.fn(async () => currentOrder),
       update: vi.fn(async (args: { data: Record<string, unknown> }) => {
         orderUpdates.push(args.data);
-        return { ...order, ...args.data };
+        currentOrder = { ...currentOrder, ...args.data };
+        return currentOrder;
       }),
     },
     product: {
@@ -241,6 +246,30 @@ describe("updateOrderStatus", () => {
     expect(inventoryTxns[0]).toMatchObject({ type: "ORDER_CANCELLATION", quantityDelta: 2, orderId: "order-1" });
   });
 
+  it("restores stock exactly once when moved backward to a pre-PRICE_CONFIRMED status (not just via CANCELLED)", async () => {
+    // Prerequisite fix for Phase 10: previously only an explicit CANCELLED transition restored
+    // stock; moving a confirmed order backward to e.g. WHATSAPP_CONTACTED (a corrected mistake,
+    // a re-negotiation) left stock silently decremented forever. Confirm, then move backward, and
+    // confirm the restore happened exactly once.
+    const { client, inventoryTxns, getStock } = fakeOrderStatusClient({ ...baseOrder, status: "NEW" });
+
+    await updateOrderStatus(admin, "order-1", { status: "PRICE_CONFIRMED" }, client);
+    expect(getStock(productA.id)).toBe(10 - 2);
+    expect(inventoryTxns).toHaveLength(1);
+    expect(inventoryTxns[0]).toMatchObject({ type: "WEBSITE_ORDER", quantityDelta: -2 });
+
+    await updateOrderStatus(admin, "order-1", { status: "WHATSAPP_CONTACTED" }, client);
+    expect(getStock(productA.id)).toBe(10); // restored back to the original level, exactly once
+    expect(inventoryTxns).toHaveLength(2);
+    expect(inventoryTxns[1]).toMatchObject({ type: "ORDER_CANCELLATION", quantityDelta: 2, orderId: "order-1" });
+
+    // A further forward-then-forward move between two committed statuses must not touch stock —
+    // both are already "committed", so no restore, no re-decrement.
+    await updateOrderStatus(admin, "order-1", { status: "PRICE_CONFIRMED" }, client);
+    await updateOrderStatus(admin, "order-1", { status: "PAYMENT_PENDING" }, client);
+    expect(inventoryTxns).toHaveLength(3); // only the second PRICE_CONFIRMED re-decrement, not a 4th row
+  });
+
   it("cancelling a never-confirmed order touches no stock at all", async () => {
     const { client, inventoryTxns } = fakeOrderStatusClient({ ...baseOrder, status: "NEW" });
     await updateOrderStatus(admin, "order-1", { status: "CANCELLED" }, client);
@@ -316,7 +345,7 @@ describe("listOrders / getOrder", () => {
     await expect(listOrders(admin, { page: 1, pageSize: 24 }, { findMany, count })).resolves.toBeDefined();
   });
 
-  it("getOrder also only includes items, never the product relation", async () => {
+  it("getOrder includes items and payments, never the product relation", async () => {
     const findUniqueOrThrow = vi.fn(async (args: Record<string, unknown>) => {
       void args;
       return { id: "order-1" };
@@ -324,6 +353,6 @@ describe("listOrders / getOrder", () => {
     await getOrder(staff, "order-1", { findUniqueOrThrow });
 
     const call = findUniqueOrThrow.mock.calls[0][0] as { include: Record<string, unknown> };
-    expect(call.include).toEqual({ items: true });
+    expect(call.include).toEqual({ items: true, payments: true });
   });
 });

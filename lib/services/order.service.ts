@@ -205,7 +205,11 @@ export async function getOrder(
   requireAnyRole(ctx, ["SUPER_ADMIN", "STAFF"]);
   return orderReader.findUniqueOrThrow({
     where: { id: orderId },
-    include: { items: true },
+    // No `product` join on either relation — Payment has no cost field to begin with, and every
+    // item field the detail view needs (name, snapshotted price/qty) already lives on OrderItem.
+    // Voided payments are included too (not filtered out) so staff can still see that one was
+    // recorded and later voided, with its reason — only the paid-total math excludes them.
+    include: { items: true, payments: true },
   });
 }
 
@@ -298,8 +302,13 @@ export async function updateOrderStatus(
           },
         });
       }
-    } else if (wasCommitted && data.status === "CANCELLED") {
-      // Stock was already committed for this order and it's now being cancelled — restore it.
+    } else if (wasCommitted && !willBeCommitted) {
+      // Stock was already committed for this order and the new status is not a committed one —
+      // whether that's an explicit CANCELLED or staff moving it backward to e.g.
+      // WHATSAPP_CONTACTED (a corrected mistake, a re-negotiation, etc.), the stock must be
+      // restored either way. Forward transitions between two committed statuses (PRICE_CONFIRMED
+      // -> PAYMENT_PENDING -> ... -> DELIVERED) leave willBeCommitted true, so this branch never
+      // fires for them — no double-restore, no restore-then-immediately-redecrement.
       for (const item of order.items) {
         const updated = await tx.product.update({
           where: { id: item.productId },

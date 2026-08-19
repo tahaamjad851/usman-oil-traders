@@ -3,13 +3,26 @@ import { redirect } from "next/navigation";
 import { PasswordChangeRequiredError } from "@/lib/auth/guard";
 import { getAuthContext } from "@/lib/auth/session";
 import { getOrder } from "@/lib/services/order.service";
+import { computeOrderPaymentSummary } from "@/lib/services/payment.service";
 import { toWhatsAppNumber } from "@/lib/utils/phone";
 import { buildStaffContactMessage } from "@/lib/services/whatsapp-message.service";
 
 import { OrderStatusForm } from "./status-form";
+import { PaymentForm } from "./payment-form";
+import { VoidPaymentButton } from "./void-payment-button";
 import { WhatsAppCustomerButton } from "./whatsapp-button";
 
 type OrderItemRow = { id: string; productName: string; quantity: number; unitPrice: string; lineTotal: string };
+
+type PaymentRow = {
+  id: string;
+  amount: string;
+  method: string;
+  status: string;
+  receivedAt: string | Date;
+  voidedAt: string | Date | null;
+  voidReason: string | null;
+};
 
 type OrderDetail = {
   id: string;
@@ -24,6 +37,7 @@ type OrderDetail = {
   finalConfirmedAmount: string | null;
   createdAt: string | Date;
   items: OrderItemRow[];
+  payments: PaymentRow[];
 };
 
 export default async function AdminOrderDetailPage({
@@ -45,6 +59,7 @@ export default async function AdminOrderDetailPage({
   const { id } = await params;
   const order = (await getOrder(ctx, id)) as OrderDetail;
 
+  const paymentSummary = computeOrderPaymentSummary(order);
   const staffMessage = buildStaffContactMessage(order);
   const normalizedCustomerNumber = toWhatsAppNumber(order.customerPhone);
   const customerWhatsappLink = normalizedCustomerNumber
@@ -124,6 +139,66 @@ export default async function AdminOrderDetailPage({
             <span className="font-mono">Rs {Number(order.finalConfirmedAmount).toLocaleString()}</span>
           </div>
         ) : null}
+      </section>
+
+      <section className="rounded-md border p-4 text-sm">
+        <h2 className="mb-2 font-medium">Payments</h2>
+
+        {paymentSummary.status === "UNCONFIRMED" ? (
+          <p className="text-muted-foreground">
+            Confirm the final order amount (via Update status below, with the amount fields) before
+            recording payments.
+          </p>
+        ) : (
+          <>
+            <div className="mb-3 grid grid-cols-3 gap-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Confirmed total</p>
+                <p className="font-mono">Rs {paymentSummary.confirmedTotal!.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Paid</p>
+                <p className="font-mono">Rs {paymentSummary.totalPaid.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Remaining</p>
+                <p className="font-mono">Rs {paymentSummary.remaining!.toLocaleString()}</p>
+              </div>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Status: {paymentSummary.status.replaceAll("_", " ")}
+            </p>
+
+            {order.payments.length > 0 ? (
+              <ul className="mb-3 space-y-1.5">
+                {order.payments.map((payment) => (
+                  <li
+                    key={payment.id}
+                    className={`flex items-center justify-between rounded border px-3 py-2 text-xs ${
+                      payment.voidedAt ? "opacity-50" : ""
+                    }`}
+                  >
+                    <span className="text-muted-foreground">
+                      {payment.method.replaceAll("_", " ")} ·{" "}
+                      {new Date(payment.receivedAt).toLocaleDateString()}
+                      {payment.voidedAt ? ` · voided (${payment.voidReason ?? "no reason given"})` : ""}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="font-mono">Rs {Number(payment.amount).toLocaleString()}</span>
+                      {!payment.voidedAt && ctx.role === "SUPER_ADMIN" ? (
+                        <VoidPaymentButton paymentId={payment.id} />
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {order.status !== "CANCELLED" && paymentSummary.status !== "FULLY_PAID" ? (
+              <PaymentForm orderId={order.id} remaining={paymentSummary.remaining!} />
+            ) : null}
+          </>
+        )}
       </section>
 
       <section>
