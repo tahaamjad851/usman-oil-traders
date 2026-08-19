@@ -487,3 +487,12 @@ model Settings {
   isPublic  Boolean  @default(false)
   updatedAt DateTime @updatedAt
 }
+
+// Backs sequential, collision-free "UOT-XXXXX" order numbers. A single-row counter, atomically
+// incremented inside the same transaction as order creation via Prisma's `increment`, rather than
+// a MAX(orderNumber)+1 read that two concurrent orders could both read before either commits.
+model OrderSequence {
+  id        Int      @id @default(1)
+  nextValue Int      @default(10001)
+  updatedAt DateTime @updatedAt
+}

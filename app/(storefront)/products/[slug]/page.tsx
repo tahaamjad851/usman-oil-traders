@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { AddToCartButton } from "@/components/storefront/AddToCartButton";
 import { SpecPlate } from "@/components/storefront/SpecPlate";
 import { StockBadge } from "@/components/storefront/StockBadge";
 import { getProductBySlug, type StockStatus } from "@/lib/services/product.service";
@@ -8,6 +9,7 @@ import { getWhatsAppNumber, whatsAppLink } from "@/lib/services/settings.service
 
 type PublicProductDetail = {
   id: string;
+  sku: string;
   name: string;
   slug: string;
   description: string | null;
@@ -117,19 +119,27 @@ export default async function ProductDetailPage({
             <p className="mt-4 text-sm leading-relaxed text-shop-muted">{product.description}</p>
           ) : null}
 
-          <div className="mt-6">
+          <div className="mt-6 space-y-3">
+            <AddToCartButton
+              productId={product.id}
+              name={product.name}
+              slug={product.slug}
+              sku={product.sku}
+              imageUrl={image?.thumbUrl ?? image?.url ?? null}
+              unitPrice={Number(product.retailPrice)}
+              stockStatus={product.stockStatus}
+            />
+
             {whatsapp ? (
               <a
                 href={whatsAppLink(whatsapp, inquiryMessage)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-shop-green px-5 py-2.5 text-sm font-medium text-shop-bg transition hover:bg-shop-green/90"
+                className="inline-flex items-center gap-2 text-sm text-shop-green hover:underline"
               >
-                Ask about this on WhatsApp
+                Or ask a question on WhatsApp
               </a>
-            ) : (
-              <p className="text-sm text-shop-muted">Contact details coming soon.</p>
-            )}
+            ) : null}
           </div>
         </div>
       </article>

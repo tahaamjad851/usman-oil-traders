@@ -3,6 +3,8 @@ import { MessageCircle, Search } from "lucide-react";
 
 import { getWhatsAppNumber, whatsAppLink } from "@/lib/services/settings.service";
 
+import { CartIcon } from "./CartIcon";
+
 export async function Header() {
   const whatsapp = await getWhatsAppNumber();
 
@@ -45,6 +47,8 @@ export async function Header() {
             <span className="hidden sm:inline">WhatsApp Us</span>
           </a>
         ) : null}
+
+        <CartIcon />
       </div>
 
       <form action="/products" className="px-4 pb-3 md:hidden" role="search">
