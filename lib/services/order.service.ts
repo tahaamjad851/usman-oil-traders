@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { requireAnyRole, ValidationError } from "@/lib/auth/guard";
+import { stripCostBasis } from "@/lib/services/sale-item-shaping";
 import {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -30,7 +31,14 @@ function hasStockCommitted(status: string): boolean {
 // Guest order creation
 // ---------------------------------------------------------------------------
 
-type OrderProductStub = { id: string; name: string; status: string; stockQuantity: number; retailPrice: unknown };
+type OrderProductStub = {
+  id: string;
+  name: string;
+  status: string;
+  stockQuantity: number;
+  retailPrice: unknown;
+  purchasePrice: unknown;
+};
 
 export type OrderCreateClient = {
   product: {
@@ -51,7 +59,7 @@ export type OrderCreateClient = {
       Record<string, unknown> & {
         id: string;
         orderNumber: string;
-        items: Array<{ productName: string; quantity: number }>;
+        items: Array<{ productName: string; quantity: number; unitCost?: unknown } & Record<string, unknown>>;
       }
     >;
   };
@@ -134,11 +142,15 @@ export async function createOrder(
         quantity: item.quantity,
         unitPrice: product.retailPrice,
         lineTotal,
+        // Cost basis for Phase 12's profit reporting — frozen here at order creation, the same
+        // moment unitPrice is frozen, and never returned from this function (see stripCostBasis
+        // below the transaction).
+        unitCost: product.purchasePrice,
       };
     });
     const websiteSubtotal = items.reduce((sum, item) => sum + Number(item.lineTotal), 0).toFixed(2);
 
-    return tx.order.create({
+    const order = await tx.order.create({
       data: {
         orderNumber,
         customerId: customer.id,
@@ -153,6 +165,9 @@ export async function createOrder(
       },
       include: { items: true },
     });
+
+    // Never returned to the guest customer (or anyone) — see sale-item-shaping.ts.
+    return { ...order, items: stripCostBasis(order.items) };
   });
 }
 
@@ -160,8 +175,10 @@ export async function createOrder(
 // Admin/staff order queue
 // ---------------------------------------------------------------------------
 
+type OrderWithItems = Record<string, unknown> & { items: Array<Record<string, unknown>> };
+
 type OrderLister = {
-  findMany: (args: Record<string, unknown>) => Promise<unknown[]>;
+  findMany: (args: Record<string, unknown>) => Promise<OrderWithItems[]>;
   count: (args: Record<string, unknown>) => Promise<number>;
 };
 
@@ -179,7 +196,7 @@ export async function listOrders(
   const where: Record<string, unknown> = {};
   if (filters.status) where.status = filters.status;
 
-  const [items, total] = await Promise.all([
+  const [rows, total] = await Promise.all([
     orderLister.findMany({
       where,
       include: { items: true },
@@ -190,11 +207,14 @@ export async function listOrders(
     orderLister.count({ where }),
   ]);
 
+  // unitCost never leaves this module — see sale-item-shaping.ts.
+  const items = rows.map((order) => ({ ...order, items: stripCostBasis(order.items) }));
+
   return { items, total, page: filters.page, pageSize: filters.pageSize };
 }
 
 type OrderReader = {
-  findUniqueOrThrow: (args: Record<string, unknown>) => Promise<unknown>;
+  findUniqueOrThrow: (args: Record<string, unknown>) => Promise<OrderWithItems>;
 };
 
 export async function getOrder(
@@ -203,7 +223,7 @@ export async function getOrder(
   orderReader: OrderReader = prisma.order as unknown as OrderReader,
 ) {
   requireAnyRole(ctx, ["SUPER_ADMIN", "STAFF"]);
-  return orderReader.findUniqueOrThrow({
+  const order = await orderReader.findUniqueOrThrow({
     where: { id: orderId },
     // No `product` join on either relation — Payment has no cost field to begin with, and every
     // item field the detail view needs (name, snapshotted price/qty) already lives on OrderItem.
@@ -211,6 +231,9 @@ export async function getOrder(
     // recorded and later voided, with its reason — only the paid-total math excludes them.
     include: { items: true, payments: true },
   });
+
+  // unitCost never leaves this module — see sale-item-shaping.ts.
+  return { ...order, items: stripCostBasis(order.items) };
 }
 
 // ---------------------------------------------------------------------------

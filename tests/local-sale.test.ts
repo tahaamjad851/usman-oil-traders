@@ -24,6 +24,7 @@ const productA = {
   status: "ACTIVE",
   stockQuantity: 10,
   retailPrice: "3000.00",
+  purchasePrice: "2200.00",
 };
 
 const validSaleInput = {
@@ -193,6 +194,20 @@ describe("createLocalSale", () => {
     expect(items[0].unitPrice).toBe(productA.retailPrice);
     expect(items[0].lineTotal).toBe("6000.00");
   });
+
+  it("snapshots unitCost (cost basis, Phase 12) from Product.purchasePrice at sale time, but never returns it", async () => {
+    const { client } = fakeLocalSaleClient();
+    const sale = await createLocalSale(staff, validSaleInput, client);
+
+    const createCall = (client.localSale.create as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      data: { items: { create: Array<{ unitCost: string }> } };
+    };
+    expect(createCall.data.items.create[0].unitCost).toBe(productA.purchasePrice);
+
+    for (const item of sale.items) {
+      expect(item).not.toHaveProperty("unitCost");
+    }
+  });
 });
 
 describe("listLocalSales / getLocalSale", () => {
@@ -224,14 +239,14 @@ describe("listLocalSales / getLocalSale", () => {
   });
 
   it("getLocalSale lets a SUPER_ADMIN open any sale, but blocks STAFF from opening another staff member's sale", async () => {
-    const findUniqueOrThrow = vi.fn(async () => ({ id: "sale-1", soldById: "someone-else" }));
+    const findUniqueOrThrow = vi.fn(async () => ({ id: "sale-1", soldById: "someone-else", items: [] }));
 
     await expect(getLocalSale(admin, "sale-1", { findUniqueOrThrow })).resolves.toBeDefined();
     await expect(getLocalSale(staff, "sale-1", { findUniqueOrThrow })).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it("getLocalSale lets STAFF open their own sale", async () => {
-    const findUniqueOrThrow = vi.fn(async () => ({ id: "sale-1", soldById: "staff-1" }));
+    const findUniqueOrThrow = vi.fn(async () => ({ id: "sale-1", soldById: "staff-1", items: [] }));
     await expect(getLocalSale(staff, "sale-1", { findUniqueOrThrow })).resolves.toBeDefined();
   });
 });

@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { ForbiddenError, requireAnyRole, ValidationError } from "@/lib/auth/guard";
+import { stripCostBasis } from "@/lib/services/sale-item-shaping";
 import {
   createLocalSaleSchema,
   type LocalSaleQuery,
@@ -27,6 +28,7 @@ type SaleProductStub = {
   status: string;
   stockQuantity: number;
   retailPrice: unknown;
+  purchasePrice: unknown;
 };
 
 export type LocalSaleCreateClient = {
@@ -51,7 +53,12 @@ export type LocalSaleCreateClient = {
     }) => Promise<{
       id: string;
       saleNumber: string;
-      items: Array<{ id: string; productId: string; productName: string; quantity: number }>;
+      items: Array<
+        { id: string; productId: string; productName: string; quantity: number; unitCost?: unknown } & Record<
+          string,
+          unknown
+        >
+      >;
     }>;
   };
   inventoryTransaction: { create: (args: { data: Record<string, unknown> }) => Promise<unknown> };
@@ -121,6 +128,9 @@ export async function createLocalSale(
       quantity: item.quantity,
       unitPrice: product.retailPrice,
       lineTotal,
+      // Cost basis for Phase 12's profit reporting, frozen at sale time — never returned from
+      // this function (see stripCostBasis below).
+      unitCost: product.purchasePrice,
     };
   });
   const totalAmount = items.reduce((sum, item) => sum + Number(item.lineTotal), 0).toFixed(2);
@@ -202,7 +212,8 @@ export async function createLocalSale(
       },
     });
 
-    return { ...sale, payment };
+    // unitCost never leaves this module — see sale-item-shaping.ts.
+    return { ...sale, items: stripCostBasis(sale.items), payment };
   });
 }
 
@@ -210,8 +221,10 @@ export async function createLocalSale(
 // Sales history
 // ---------------------------------------------------------------------------
 
+type LocalSaleWithItems = Record<string, unknown> & { items: Array<Record<string, unknown>> };
+
 type LocalSaleLister = {
-  findMany: (args: Record<string, unknown>) => Promise<unknown[]>;
+  findMany: (args: Record<string, unknown>) => Promise<LocalSaleWithItems[]>;
   count: (args: Record<string, unknown>) => Promise<number>;
 };
 
@@ -241,7 +254,7 @@ export async function listLocalSales(
     };
   }
 
-  const [items, total] = await Promise.all([
+  const [rows, total] = await Promise.all([
     lister.findMany({
       where,
       include: { items: true, customer: true, soldBy: { select: { id: true, name: true } }, payments: true },
@@ -252,10 +265,17 @@ export async function listLocalSales(
     lister.count({ where }),
   ]);
 
+  // unitCost never leaves this module — see sale-item-shaping.ts.
+  const items = rows.map((sale) => ({ ...sale, items: stripCostBasis(sale.items) }));
+
   return { items, total, page: filters.page, pageSize: filters.pageSize };
 }
 
-type LocalSaleRecord = Record<string, unknown> & { id: string; soldById: string };
+type LocalSaleRecord = Record<string, unknown> & {
+  id: string;
+  soldById: string;
+  items: Array<Record<string, unknown>>;
+};
 
 type LocalSaleReader = {
   findUniqueOrThrow: (args: Record<string, unknown>) => Promise<LocalSaleRecord>;
@@ -279,5 +299,6 @@ export async function getLocalSale(
     throw new ForbiddenError("This sale was not recorded by you.");
   }
 
-  return sale;
+  // unitCost never leaves this module — see sale-item-shaping.ts.
+  return { ...sale, items: stripCostBasis(sale.items) };
 }

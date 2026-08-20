@@ -46,7 +46,7 @@ export default async function PosHistoryPage({
     page: 1,
     pageSize: 50,
   });
-  const sales = result.items as SaleRow[];
+  const sales = result.items as unknown as SaleRow[];
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-6">

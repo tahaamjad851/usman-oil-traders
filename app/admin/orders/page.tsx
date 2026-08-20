@@ -42,7 +42,7 @@ export default async function AdminOrdersPage({
   const statusParam = first(params.status) as (typeof orderStatuses)[number] | undefined;
 
   const result = await listOrders(ctx, { status: statusParam, page: 1, pageSize: 50 });
-  const orders = result.items as OrderRow[];
+  const orders = result.items as unknown as OrderRow[];
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">

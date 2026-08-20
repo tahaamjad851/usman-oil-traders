@@ -26,6 +26,7 @@ const productA = {
   status: "ACTIVE",
   stockQuantity: 10,
   retailPrice: "3000.00",
+  purchasePrice: "2200.00",
 };
 
 const validOrderInput = {
@@ -98,6 +99,18 @@ describe("createOrder", () => {
     expect(items.create[0].unitPrice).toBe(productA.retailPrice);
     expect(items.create[0].lineTotal).toBe("6000.00");
     expect(orderCreateArgs[0].websiteSubtotal).toBe("6000.00");
+  });
+
+  it("snapshots unitCost (cost basis, Phase 12) from Product.purchasePrice at creation, but never returns it", async () => {
+    const { client, orderCreateArgs } = fakeOrderCreateClient();
+    const order = await createOrder(validOrderInput, client);
+
+    const items = orderCreateArgs[0].items as { create: Array<{ unitCost: string }> };
+    expect(items.create[0].unitCost).toBe(productA.purchasePrice);
+
+    for (const item of order.items) {
+      expect(item).not.toHaveProperty("unitCost");
+    }
   });
 
   it("creates the order as NEW / PENDING and finds-or-creates the customer by phone", async () => {
@@ -348,7 +361,7 @@ describe("listOrders / getOrder", () => {
   it("getOrder includes items and payments, never the product relation", async () => {
     const findUniqueOrThrow = vi.fn(async (args: Record<string, unknown>) => {
       void args;
-      return { id: "order-1" };
+      return { id: "order-1", items: [] };
     });
     await getOrder(staff, "order-1", { findUniqueOrThrow });
 

@@ -377,8 +377,16 @@ model OrderItem {
   productId   String
   productName String
   quantity    Int
-  unitPrice   Decimal @db.Decimal(10, 2)
-  lineTotal   Decimal @db.Decimal(12, 2)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  lineTotal   Decimal  @db.Decimal(12, 2)
+  // Cost-basis snapshot, frozen at the same moment as unitPrice (order creation) — added in
+  // Phase 12 so COGS/profit reporting never has to join back to the CURRENT Product.purchasePrice,
+  // which would silently rewrite historical profit whenever a supplier cost changes. Nullable so
+  // rows created before this migration (none in this project yet, since no live DB has been
+  // deployed) can be backfilled rather than breaking; see scripts/backfill-cost-snapshots.ts.
+  // Never exposed on any Order API response — see product.service.ts-style field stripping in
+  // order.service.ts.
+  unitCost    Decimal? @db.Decimal(10, 2)
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
@@ -409,13 +417,16 @@ model LocalSale {
 }
 
 model LocalSaleItem {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   localSaleId String
   productId   String
   productName String
   quantity    Int
-  unitPrice   Decimal @db.Decimal(10, 2)
-  lineTotal   Decimal @db.Decimal(12, 2)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  lineTotal   Decimal  @db.Decimal(12, 2)
+  // Same cost-basis snapshot as OrderItem.unitCost, frozen at sale creation. POS sales settle
+  // immediately, so this is simply "what the product cost at the moment of the sale."
+  unitCost    Decimal? @db.Decimal(10, 2)
 
   localSale LocalSale @relation(fields: [localSaleId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id])

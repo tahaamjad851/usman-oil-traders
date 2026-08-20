@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:seed": "prisma db seed",
     "db:bootstrap-admin": "tsx scripts/bootstrap-super-admin.ts",
+    "db:backfill-cost-snapshots": "tsx scripts/backfill-cost-snapshots.ts",
     "test": "vitest run"
   },
   "dependencies": {
