@@ -28,3 +28,7 @@ export function errorResponse(error: unknown) {
     { status },
   );
 }
+
+export function rateLimitResponse() {
+  return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
+}

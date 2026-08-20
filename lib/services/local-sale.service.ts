@@ -65,6 +65,7 @@ export type LocalSaleCreateClient = {
   payment: {
     create: (args: { data: Record<string, unknown> }) => Promise<Record<string, unknown> & { id: string }>;
   };
+  auditLog: { create: (args: { data: Record<string, unknown> }) => Promise<unknown> };
 };
 
 export type TransactionalLocalSaleClient = LocalSaleCreateClient & {
@@ -163,6 +164,8 @@ export async function createLocalSale(
       include: { items: true },
     });
 
+    let anyItemWentNegative = false;
+
     // One transaction for the sale, every stock decrement, every ledger row, and the payment
     // record — if any step fails, the whole sale rolls back, so stock can never end up decremented
     // without a matching sale (or vice versa).
@@ -179,6 +182,7 @@ export async function createLocalSale(
         );
       }
       if (wentNegative) {
+        anyItemWentNegative = true;
         console.warn(
           `[pos] Sale ${saleNumber} took stock for product ${item.productId} negative (${updated.stockQuantity}).`,
         );
@@ -209,6 +213,26 @@ export async function createLocalSale(
         status: "RECEIVED",
         receivedById: ctx.userId,
         notes: data.notes,
+      },
+    });
+
+    // POS sale creation had no audit trail before Phase 13 — the Payment/InventoryTransaction
+    // rows it creates carry some of the same facts, but not the negative-stock override, which is
+    // exactly the kind of thing an owner reviewing the audit log needs to be able to find.
+    await tx.auditLog.create({
+      data: {
+        userId: ctx.userId,
+        action: "LOCAL_SALE_RECORDED",
+        entityType: "LocalSale",
+        entityId: sale.id,
+        newValue: {
+          saleNumber,
+          totalAmount,
+          itemCount: sale.items.length,
+          paymentMethod: data.paymentMethod,
+          negativeStockOverride: anyItemWentNegative,
+        },
+        ipAddress: ctx.ip,
       },
     });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { errorResponse, requestIp } from "@/lib/api/route-helpers";
+import { orderCreationRateLimiter } from "@/lib/api/rate-limit";
+import { errorResponse, rateLimitResponse, requestIp } from "@/lib/api/route-helpers";
 import { getAuthContext } from "@/lib/auth/session";
 import { createOrder, listOrders } from "@/lib/services/order.service";
 import { getWhatsAppNumber, whatsAppLink } from "@/lib/services/settings.service";
@@ -23,6 +24,10 @@ export async function GET(request: Request) {
 // createOrder(); nothing from the client's cart is trusted.
 export async function POST(request: Request) {
   try {
+    const ip = requestIp(request) ?? "unknown";
+    const allowed = await orderCreationRateLimiter.consume(ip);
+    if (!allowed) return rateLimitResponse();
+
     const order = await createOrder(await request.json());
 
     // Built here rather than inside createOrder() so order creation itself stays a pure business

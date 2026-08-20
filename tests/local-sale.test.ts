@@ -38,6 +38,7 @@ function fakeLocalSaleClient(products: typeof productA[] = [productA], startingS
   const inventoryTxns: Record<string, unknown>[] = [];
   const payments: Record<string, unknown>[] = [];
   const customerUpsertArgs: Record<string, unknown>[] = [];
+  const auditLogs: Record<string, unknown>[] = [];
 
   const client: TransactionalLocalSaleClient = {
     product: {
@@ -83,10 +84,23 @@ function fakeLocalSaleClient(products: typeof productA[] = [productA], startingS
         return { id: "payment-1", ...args.data };
       }),
     },
+    auditLog: {
+      create: vi.fn(async (args: { data: Record<string, unknown> }) => {
+        auditLogs.push(args.data);
+        return args.data;
+      }),
+    },
     $transaction: async (fn) => fn(client),
   };
 
-  return { client, inventoryTxns, payments, customerUpsertArgs, getStock: (id: string) => stockByProduct.get(id) };
+  return {
+    client,
+    inventoryTxns,
+    payments,
+    customerUpsertArgs,
+    auditLogs,
+    getStock: (id: string) => stockByProduct.get(id),
+  };
 }
 
 describe("createLocalSale", () => {
@@ -175,6 +189,32 @@ describe("createLocalSale", () => {
 
     expect(getStock(productA.id)).toBeLessThan(0);
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("writes a LOCAL_SALE_RECORDED audit entry, flagging when a negative-stock override was used (Phase 13)", async () => {
+    const normal = fakeLocalSaleClient();
+    await createLocalSale(staff, validSaleInput, normal.client);
+    expect(normal.auditLogs).toHaveLength(1);
+    expect(normal.auditLogs[0]).toMatchObject({
+      userId: "staff-1",
+      action: "LOCAL_SALE_RECORDED",
+      entityType: "LocalSale",
+    });
+    expect(normal.auditLogs[0].newValue).toMatchObject({ negativeStockOverride: false });
+
+    const overridden = fakeLocalSaleClient([productA], 1);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await createLocalSale(
+      staff,
+      {
+        items: [{ productId: productA.id, quantity: 5 }],
+        paymentMethod: "CASH",
+        amountTendered: "15000.00",
+        allowNegativeStock: true,
+      },
+      overridden.client,
+    );
+    expect(overridden.auditLogs[0].newValue).toMatchObject({ negativeStockOverride: true });
   });
 
   it("finds-or-creates a Customer by phone when one is given, but stays anonymous when it isn't", async () => {
