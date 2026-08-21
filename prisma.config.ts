@@ -11,5 +11,11 @@ export default defineConfig({
   },
   datasource: {
     url: process.env["DATABASE_URL"],
+    // The installed @prisma/config@7.9.1 types omit `directUrl`, but the schema engine
+    // requires it here (not in schema.prisma) for a non-pooled migration connection —
+    // `prisma validate` rejects `directUrl` inside schema.prisma in this version and
+    // points here instead. Remove this suppression once @prisma/config ships the type.
+    // @ts-expect-error - directUrl is accepted at runtime but missing from the Datasource type
+    directUrl: process.env["DIRECT_URL"],
   },
 });
