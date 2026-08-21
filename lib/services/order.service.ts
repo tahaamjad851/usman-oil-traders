@@ -48,7 +48,7 @@ export type OrderCreateClient = {
     upsert: (args: Record<string, unknown>) => Promise<{ id: string }>;
   };
   orderSequence: {
-    upsert: (args: Record<string, unknown>) => Promise<unknown>;
+    createMany: (args: { data: Array<Record<string, unknown>>; skipDuplicates?: boolean }) => Promise<unknown>;
     update: (args: Record<string, unknown>) => Promise<{ nextValue: number }>;
   };
   order: {
@@ -70,14 +70,16 @@ export type TransactionalOrderCreateClient = OrderCreateClient & {
 };
 
 async function nextOrderNumber(tx: OrderCreateClient): Promise<string> {
-  // The upsert with a no-op update is idempotent under concurrency (Postgres compiles it to
-  // INSERT ... ON CONFLICT DO UPDATE), so two orders racing to create row id=1 for the first time
-  // ever can't collide. The following increment is then a plain atomic column update.
-  await tx.orderSequence.upsert({
-    where: { id: 1 },
-    create: { id: 1, nextValue: 10001 },
-    update: {},
-  });
+  // createMany + skipDuplicates compiles to a real INSERT ... ON CONFLICT DO NOTHING, which never
+  // raises on a conflicting row. upsert() was tried first here and, verified under a real
+  // concurrent-load test (tests/integration/stock-race.test.ts), does NOT behave as a single
+  // atomic statement when called inside an interactive transaction — two orders racing to create
+  // row id=1 for the very first time could both attempt the insert, and Postgres marks the whole
+  // surrounding transaction aborted the instant one of them hits a real unique-constraint
+  // violation, poisoning every later statement in that transaction (including the increment
+  // below) even if the JS-level exception is caught. DO NOTHING sidesteps that failure mode
+  // entirely instead of trying to recover from it after the fact.
+  await tx.orderSequence.createMany({ data: [{ id: 1, nextValue: 10001 }], skipDuplicates: true });
   const updated = await tx.orderSequence.update({
     where: { id: 1 },
     data: { nextValue: { increment: 1 } },

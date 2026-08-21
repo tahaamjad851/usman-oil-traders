@@ -46,7 +46,7 @@ function fakeOrderCreateClient(products: typeof productA[] = [productA]) {
       upsert: vi.fn(async () => ({ id: "customer-1" })),
     },
     orderSequence: {
-      upsert: vi.fn(async () => ({ id: 1 })),
+      createMany: vi.fn(async () => ({ count: 1 })),
       update: vi.fn(async () => ({ nextValue: 10002 })),
     },
     order: {

@@ -6,7 +6,12 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  extensions = [pgTrgm]
+  // Explicit map is required: without it, this Prisma version sends a literal `CREATE EXTENSION
+  // "pgTrgm"` (the Prisma-level camelCase name) instead of translating it to the real extension
+  // name, which fails on a real Postgres server with "extension \"pgTrgm\" is not available."
+  // Never caught before Phase 14 because `prisma db push`/`migrate` had never been run against a
+  // real database in this project's history until the integration test suite added one.
+  extensions = [pgTrgm(map: "pg_trgm")]
 }
 
 enum UserRole {

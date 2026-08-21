@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-typecheck-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: lint-typecheck-unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      # No Postgres/Redis service containers needed: the integration suite boots its own
+      # disposable Postgres (embedded-postgres) and Redis (redis-memory-server) as real local
+      # child processes — see tests/integration/pg-test-server.ts and redis-test-server.ts. Both
+      # download a real binary for the runner's platform on first use.
+      - run: npm run test:integration
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: lint-typecheck-unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx playwright install --with-deps chromium
+      # tests/e2e/global-setup.ts boots the same disposable Postgres/Redis pair, then runs a real
+      # `next build` + `next start` against them before any spec file runs — see that file for why
+      # this isn't wired through Playwright's own `webServer` config.
+      - run: npm run test:e2e

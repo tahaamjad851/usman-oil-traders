@@ -43,7 +43,7 @@ export type LocalSaleCreateClient = {
     upsert: (args: Record<string, unknown>) => Promise<{ id: string }>;
   };
   localSaleSequence: {
-    upsert: (args: Record<string, unknown>) => Promise<unknown>;
+    createMany: (args: { data: Array<Record<string, unknown>>; skipDuplicates?: boolean }) => Promise<unknown>;
     update: (args: Record<string, unknown>) => Promise<{ nextValue: number }>;
   };
   localSale: {
@@ -73,7 +73,11 @@ export type TransactionalLocalSaleClient = LocalSaleCreateClient & {
 };
 
 async function nextSaleNumber(tx: LocalSaleCreateClient): Promise<string> {
-  await tx.localSaleSequence.upsert({ where: { id: 1 }, create: { id: 1, nextValue: 1 }, update: {} });
+  // See the identical comment in order.service.ts's nextOrderNumber — createMany + skipDuplicates
+  // (a real INSERT ... ON CONFLICT DO NOTHING) replaces an upsert that was verified, under real
+  // concurrent load, to poison the whole surrounding transaction when two sales raced to create
+  // row id=1 for the first time.
+  await tx.localSaleSequence.createMany({ data: [{ id: 1, nextValue: 1 }], skipDuplicates: true });
   const updated = await tx.localSaleSequence.update({
     where: { id: 1 },
     data: { nextValue: { increment: 1 } },

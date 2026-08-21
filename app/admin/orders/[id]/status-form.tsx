@@ -9,6 +9,9 @@ export function OrderStatusForm({ orderId, currentStatus }: { orderId: string; c
   const router = useRouter();
   const [status, setStatus] = useState(currentStatus);
   const [allowNegativeStock, setAllowNegativeStock] = useState(false);
+  const [finalProductAmount, setFinalProductAmount] = useState("");
+  const [deliveryCharge, setDeliveryCharge] = useState("");
+  const [discount, setDiscount] = useState("");
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -20,7 +23,16 @@ export function OrderStatusForm({ orderId, currentStatus }: { orderId: string; c
     const response = await fetch(`/api/orders/${orderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, allowNegativeStock }),
+      body: JSON.stringify({
+        status,
+        allowNegativeStock,
+        // Only sent when the staff member actually typed something — omitting these three lets
+        // a plain status change (e.g. NEW -> WHATSAPP_CONTACTED) go through without accidentally
+        // touching finalConfirmedAmount, matching the API's own `.optional()` schema fields.
+        ...(finalProductAmount ? { finalProductAmount } : {}),
+        ...(deliveryCharge ? { deliveryCharge } : {}),
+        ...(discount ? { discount } : {}),
+      }),
     });
 
     setIsSubmitting(false);
@@ -57,6 +69,41 @@ export function OrderStatusForm({ orderId, currentStatus }: { orderId: string; c
         />
         Allow this to take stock negative
       </label>
+
+      <div className="grid grid-cols-3 gap-2">
+        <label className="block text-sm font-medium">
+          Final product amount
+          <input
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+            value={finalProductAmount}
+            onChange={(event) => setFinalProductAmount(event.target.value)}
+            placeholder="0.00"
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          Delivery charge
+          <input
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+            value={deliveryCharge}
+            onChange={(event) => setDeliveryCharge(event.target.value)}
+            placeholder="0.00"
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          Discount
+          <input
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+            value={discount}
+            onChange={(event) => setDiscount(event.target.value)}
+            placeholder="0.00"
+          />
+        </label>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Fill these in (final product amount is usually the negotiated price) and update status to
+        confirm the order&apos;s final amount — this unlocks payment recording below.
+      </p>
+
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <button
         className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"

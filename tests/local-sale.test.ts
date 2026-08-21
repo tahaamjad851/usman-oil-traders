@@ -57,7 +57,7 @@ function fakeLocalSaleClient(products: typeof productA[] = [productA], startingS
       }),
     },
     localSaleSequence: {
-      upsert: vi.fn(async () => ({ id: 1 })),
+      createMany: vi.fn(async () => ({ count: 1 })),
       update: vi.fn(async () => ({ nextValue: 2 })),
     },
     localSale: {

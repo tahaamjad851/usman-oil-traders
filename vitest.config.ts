@@ -15,6 +15,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // The integration/concurrency suite has its own config (vitest.integration.config.ts) with a
+    // real disposable Postgres and its own globalSetup — it must not also run under this config's
+    // fully-mocked DATABASE_URL placeholder, which was never meant to be dialled.
+    exclude: ["**/node_modules/**", "tests/integration/**"],
     env: {
       // Placeholders only — every test injects its own dependencies (see the DI
       // parameters throughout lib/services/*), so the real Prisma/Redis clients are
@@ -22,6 +26,11 @@ export default defineConfig({
       // "must be configured" checks in lib/db.ts and lib/redis.ts at import time.
       DATABASE_URL: "postgresql://test:test@localhost:5432/test?schema=public",
       REDIS_URL: "redis://localhost:6379",
+    },
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: ["lib/services/**/*.ts", "lib/auth/**/*.ts", "lib/api/**/*.ts"],
     },
   },
 });

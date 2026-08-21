@@ -10,7 +10,11 @@
     "db:seed": "prisma db seed",
     "db:bootstrap-admin": "tsx scripts/bootstrap-super-admin.ts",
     "db:backfill-cost-snapshots": "tsx scripts/backfill-cost-snapshots.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1112.0",
@@ -36,14 +40,18 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.21.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.11",
+    "embedded-postgres": "^18.4.0-beta.17",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "prisma": "^7.9.1",
+    "redis-memory-server": "^0.17.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5",
