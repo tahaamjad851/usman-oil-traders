@@ -14,6 +14,9 @@ function client(): S3Client {
   return new S3Client({
     region: process.env.S3_REGION || "auto",
     endpoint: process.env.S3_ENDPOINT || undefined,
+    // Supabase's S3-compatible endpoint doesn't support virtual-hosted-style
+    // addressing (bucket-as-subdomain) — it 404s/handshake-fails without this.
+    forcePathStyle: true,
     credentials: {
       accessKeyId: requiredEnv("S3_ACCESS_KEY_ID"),
       secretAccessKey: requiredEnv("S3_SECRET_ACCESS_KEY"),
