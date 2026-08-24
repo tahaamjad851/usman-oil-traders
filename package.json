@@ -2,12 +2,22 @@
   "name": "usman-oil-traders",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "allowScripts": {
+    "prisma": true,
+    "@prisma/engines": true,
+    "argon2": true
+  },
   "scripts": {
     "dev": "next dev",
+    "postinstall": "prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "db:seed": "prisma db seed",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:bootstrap-admin": "tsx scripts/bootstrap-super-admin.ts",
     "db:backfill-cost-snapshots": "tsx scripts/backfill-cost-snapshots.ts",
     "test": "vitest run",
