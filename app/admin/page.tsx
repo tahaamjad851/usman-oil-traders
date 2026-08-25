@@ -40,6 +40,18 @@ const SECTIONS: AdminSection[] = [
     roles: ["SUPER_ADMIN", "STAFF"],
   },
   {
+    href: "/admin/products",
+    label: "Products",
+    description: "Manage the catalog: create and edit products, images",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    href: "/admin/staff",
+    label: "Staff",
+    description: "Create staff accounts and manage access",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
     href: "/admin/payments",
     label: "Payments",
     description: "Received payments across orders and POS sales",

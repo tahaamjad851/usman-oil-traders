@@ -13,6 +13,7 @@ const adminOnlyPrefixes = [
   "/admin/audit-log",
   "/admin/reports",
   "/admin/expenses",
+  "/admin/products",
   // Aggregate cross-channel reconciliation totals — same "owner-only revenue figure" boundary as
   // Phase 12's reporting. Per-order payment history (on /admin/orders/[id]) stays open to staff.
   "/admin/payments",

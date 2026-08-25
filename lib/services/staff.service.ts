@@ -51,6 +51,25 @@ export async function createStaffAccount(
   });
 }
 
+export async function listStaffAccounts(ctx: AuthContext) {
+  requireRole(ctx, "SUPER_ADMIN");
+
+  return prisma.user.findMany({
+    where: { role: "STAFF" },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      role: true,
+      isActive: true,
+      mustChangePassword: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 export async function deactivateStaffAccount(ctx: AuthContext, staffId: string) {
   requireRole(ctx, "SUPER_ADMIN");
 
@@ -82,6 +101,41 @@ export async function deactivateStaffAccount(ctx: AuthContext, staffId: string) 
         entityId: staff.id,
         previousValue: { isActive: staff.isActive },
         newValue: { isActive: false },
+        ipAddress: ctx.ip,
+      },
+    });
+
+    return updated;
+  });
+}
+
+export async function reactivateStaffAccount(ctx: AuthContext, staffId: string) {
+  requireRole(ctx, "SUPER_ADMIN");
+
+  return prisma.$transaction(async (tx) => {
+    const staff = await tx.user.findUniqueOrThrow({
+      where: { id: staffId },
+      select: { id: true, role: true, isActive: true, username: true },
+    });
+
+    if (staff.role !== "STAFF") {
+      throw new ValidationError("Only staff accounts can be reactivated here.");
+    }
+
+    const updated = await tx.user.update({
+      where: { id: staff.id },
+      data: { isActive: true },
+      select: { id: true, username: true, role: true, isActive: true },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        userId: ctx.userId,
+        action: "USER_REACTIVATED",
+        entityType: "User",
+        entityId: staff.id,
+        previousValue: { isActive: staff.isActive },
+        newValue: { isActive: true },
         ipAddress: ctx.ip,
       },
     });
