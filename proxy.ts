@@ -17,6 +17,8 @@ const adminOnlyPrefixes = [
   // Aggregate cross-channel reconciliation totals — same "owner-only revenue figure" boundary as
   // Phase 12's reporting. Per-order payment history (on /admin/orders/[id]) stays open to staff.
   "/admin/payments",
+  // Supplier/buyer running balances — same owner-only financial-ledger boundary as payments.
+  "/admin/khata",
 ];
 
 export default auth((request) => {

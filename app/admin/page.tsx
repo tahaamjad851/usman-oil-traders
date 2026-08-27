@@ -58,6 +58,12 @@ const SECTIONS: AdminSection[] = [
     roles: ["SUPER_ADMIN"],
   },
   {
+    href: "/admin/khata",
+    label: "Khata",
+    description: "Money owed to suppliers and money owed by buyers",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
     href: "/admin/expenses",
     label: "Expenses",
     description: "Track business expenses",
