@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { CategoryFilterList } from "./CategoryFilterList";
+
 export type CategoryNode = { id: string; name: string; slug: string; children?: CategoryNode[] };
 export type BrandNode = { id: string; name: string; slug: string };
 
@@ -26,36 +28,7 @@ function FilterContent({
     <div>
       <div className="mb-5">
         <h3 className="mb-2 text-sm font-medium text-shop-ink">Category</h3>
-        <ul className="space-y-1 text-sm">
-          {categories.map((category) => (
-            <li key={category.id}>
-              <Link
-                href={`/products?category=${category.id}`}
-                className={`block rounded px-2 py-1 transition hover:bg-shop-ink/5 ${
-                  activeCategoryId === category.id ? "text-shop-amber" : "text-shop-muted"
-                }`}
-              >
-                {category.name}
-              </Link>
-              {category.children && category.children.length > 0 ? (
-                <ul className="ml-3 space-y-1 border-l border-shop-ink/10 pl-2">
-                  {category.children.map((child) => (
-                    <li key={child.id}>
-                      <Link
-                        href={`/products?category=${child.id}`}
-                        className={`block rounded px-2 py-1 text-xs transition hover:bg-shop-ink/5 ${
-                          activeCategoryId === child.id ? "text-shop-amber" : "text-shop-muted"
-                        }`}
-                      >
-                        {child.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <CategoryFilterList categories={categories} activeCategoryId={activeCategoryId} />
       </div>
 
       <div className="mb-5">
