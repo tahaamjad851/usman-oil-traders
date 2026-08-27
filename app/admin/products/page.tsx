@@ -8,6 +8,7 @@ import { listCategories } from "@/lib/services/category.service";
 import { computeStockStatus, listProducts } from "@/lib/services/product.service";
 
 import { flattenCategories } from "./category-options";
+import { DeleteProductButton } from "./delete-product-button";
 import { ProductForm } from "./product-form";
 
 type CategoryTreeRow = { id: string; name: string; children?: { id: string; name: string }[] };
@@ -76,6 +77,7 @@ export default async function AdminProductsPage() {
                 <th className="px-3 py-2">Brand</th>
                 <th className="px-3 py-2 text-right">Price</th>
                 <th className="px-3 py-2">Stock</th>
+                <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -101,6 +103,11 @@ export default async function AdminProductsPage() {
                       <span className={stockStatus === "OUT_OF_STOCK" ? "text-destructive" : undefined}>
                         {STOCK_LABEL[stockStatus]}
                       </span>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      {product.status !== "DISCONTINUED" ? (
+                        <DeleteProductButton productId={product.id} />
+                      ) : null}
                     </td>
                   </tr>
                 );
