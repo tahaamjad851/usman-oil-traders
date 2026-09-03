@@ -3,7 +3,14 @@ import { z } from "zod";
 // PURCHASE, LOCAL_SALE, WEBSITE_ORDER, ORDER_CANCELLATION are always written by the flow that
 // caused them (purchase receiving, POS sale, website fulfillment) — never by a direct API call —
 // so the manual-adjustment endpoint only accepts the movement types a person can deliberately log.
-export const manualAdjustmentTypes = ["MANUAL_ADJUSTMENT", "DAMAGE", "RETURN", "TRANSFER"] as const;
+//
+// TRANSFER was scaffolded for a multi-branch feature that was never built (no source/destination
+// location exists anywhere in this codebase) and is deliberately excluded here so no new
+// adjustment can be logged with it — it stays in the Prisma enum and in
+// inventoryTransactionQuerySchema's filter below purely because historical rows may still carry
+// it; removing a value from a live Postgres enum requires rewriting every referencing row, which
+// isn't worth doing for this.
+export const manualAdjustmentTypes = ["MANUAL_ADJUSTMENT", "DAMAGE", "RETURN"] as const;
 
 export const adjustStockSchema = z.object({
   type: z.enum(manualAdjustmentTypes).default("MANUAL_ADJUSTMENT"),

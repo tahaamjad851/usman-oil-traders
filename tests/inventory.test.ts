@@ -130,6 +130,16 @@ describe("adjustStock", () => {
     await expect(adjustStock(admin, "product-1", { quantityDelta: 0, reason: "test" }, client)).rejects.toThrow();
     await expect(adjustStock(admin, "product-1", { quantityDelta: 1, reason: "" }, client)).rejects.toThrow();
   });
+
+  // TRANSFER was never wired to any real multi-branch behavior and has been scaffolding-only —
+  // removed from the set a new adjustment can use. It stays in the Prisma enum for historical
+  // rows, so this only asserts new submissions are rejected, not that the value is gone entirely.
+  it("rejects TRANSFER as a manual adjustment type", async () => {
+    const { client } = fakeStockClient(10);
+    await expect(
+      adjustStock(admin, "product-1", { type: "TRANSFER", quantityDelta: 1, reason: "test" }, client),
+    ).rejects.toThrow();
+  });
 });
 
 describe("listInventoryTransactions", () => {

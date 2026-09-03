@@ -149,6 +149,9 @@ export async function listProducts(
   ctx: AuthContext | null,
   filters: ProductSearchQuery,
   productLister: ProductLister = prisma.product as unknown as ProductLister,
+  // Admin-only capability (e.g. the full stock list's "lowest stock first" default) — not part of
+  // ProductSearchQuery/the public search API, so it can't be driven by a public query string.
+  orderBy: Record<string, "asc" | "desc"> = { createdAt: "desc" },
 ) {
   const where = buildProductWhere(filters, ctx);
 
@@ -158,7 +161,7 @@ export async function listProducts(
       include: { images: { take: 1, orderBy: { sortOrder: "asc" } }, brand: true, category: true },
       skip: (filters.page - 1) * filters.pageSize,
       take: filters.pageSize,
-      orderBy: { createdAt: "desc" },
+      orderBy,
     }),
     productLister.count({ where }),
   ]);

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PasswordChangeRequiredError } from "@/lib/auth/guard";
@@ -53,6 +54,9 @@ export default async function InventoryPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Signed in as {ctx.username} ({ctx.role})
         </p>
+        <Link href="/admin/inventory/stock" className="mt-1 inline-block text-xs text-muted-foreground hover:underline">
+          View full stock list →
+        </Link>
       </div>
 
       <section className="space-y-3">

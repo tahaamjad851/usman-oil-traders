@@ -252,3 +252,29 @@ describe("listProducts public filtering", () => {
     expect(findMany.mock.calls[0][0].where).toMatchObject({ status: "ACTIVE" });
   });
 });
+
+describe("listProducts sorting", () => {
+  it("defaults to createdAt desc when no orderBy is given", async () => {
+    const findMany = vi.fn(async (args: Record<string, unknown>) => {
+      void args;
+      return [] as never[];
+    });
+    const count = vi.fn(async () => 0);
+
+    await listProducts(null, { page: 1, pageSize: 24 }, { findMany, count });
+
+    expect(findMany.mock.calls[0][0].orderBy).toEqual({ createdAt: "desc" });
+  });
+
+  it("passes a custom orderBy through untouched — e.g. the admin stock list's lowest-stock-first default", async () => {
+    const findMany = vi.fn(async (args: Record<string, unknown>) => {
+      void args;
+      return [] as never[];
+    });
+    const count = vi.fn(async () => 0);
+
+    await listProducts(null, { page: 1, pageSize: 24 }, { findMany, count }, { stockQuantity: "asc" });
+
+    expect(findMany.mock.calls[0][0].orderBy).toEqual({ stockQuantity: "asc" });
+  });
+});
