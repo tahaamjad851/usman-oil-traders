@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { FilterSidebar, type BrandNode, type CategoryNode } from "@/components/storefront/FilterSidebar";
 import { Pagination } from "@/components/storefront/Pagination";
 import { ProductCard } from "@/components/storefront/ProductCard";
+import { RevealOnScroll } from "@/components/storefront/RevealOnScroll";
 import { listBrands } from "@/lib/services/brand.service";
 import { listCategories } from "@/lib/services/category.service";
 import type { StockStatus } from "@/lib/services/product.service";
@@ -112,22 +113,24 @@ export default async function ProductsPage({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {items.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  slug={product.slug}
-                  name={product.name}
-                  brandName={product.brand?.name}
-                  imageUrl={product.images?.[0]?.thumbUrl ?? product.images?.[0]?.url ?? null}
-                  retailPrice={Number(product.retailPrice)}
-                  viscosity={product.viscosity}
-                  size={product.size}
-                  oilType={product.oilType}
-                  stockStatus={product.stockStatus}
-                />
-              ))}
-            </div>
+            <RevealOnScroll>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {items.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    slug={product.slug}
+                    name={product.name}
+                    brandName={product.brand?.name}
+                    imageUrl={product.images?.[0]?.thumbUrl ?? product.images?.[0]?.url ?? null}
+                    retailPrice={Number(product.retailPrice)}
+                    viscosity={product.viscosity}
+                    size={product.size}
+                    oilType={product.oilType}
+                    stockStatus={product.stockStatus}
+                  />
+                ))}
+              </div>
+            </RevealOnScroll>
             <Pagination page={result.page} pageSize={result.pageSize} total={result.total} buildHref={buildHref} />
           </>
         )}
