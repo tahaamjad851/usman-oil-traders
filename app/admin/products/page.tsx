@@ -72,56 +72,69 @@ export default async function AdminProductsPage() {
       {products.length === 0 ? (
         <p className="text-sm text-muted-foreground">No products yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left">
-              <tr>
-                <th className="px-3 py-2">SKU</th>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Brand</th>
-                <th className="px-3 py-2 text-right">Price</th>
-                <th className="px-3 py-2">Stock</th>
-                <th className="px-3 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => {
-                const stockStatus = computeStockStatus(product.stockQuantity, product.minimumStock);
-                return (
-                  <tr key={product.id} className="border-t">
-                    <td className="px-3 py-2 font-mono text-xs">{product.sku}</td>
-                    <td className="px-3 py-2">
-                      <Link href={`/admin/products/${product.id}`} className="hover:underline">
-                        {product.name}
-                      </Link>
-                      {STATUS_LABEL[product.status] ? (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          ({STATUS_LABEL[product.status]})
+        <details className="rounded-md border">
+          <summary className="cursor-pointer px-3 py-2 text-sm font-medium hover:bg-muted/50">
+            Show products ({result.total})
+          </summary>
+          <div className="overflow-x-auto border-t">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left">
+                <tr>
+                  <th className="px-3 py-2">SKU</th>
+                  <th className="px-3 py-2">Name</th>
+                  <th className="px-3 py-2">Category</th>
+                  <th className="px-3 py-2">Brand</th>
+                  <th className="px-3 py-2 text-right">Price</th>
+                  <th className="px-3 py-2">Stock</th>
+                  <th className="px-3 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => {
+                  const stockStatus = computeStockStatus(product.stockQuantity, product.minimumStock);
+                  return (
+                    <tr key={product.id} className="border-t">
+                      <td className="px-3 py-2 font-mono text-xs">{product.sku}</td>
+                      <td className="px-3 py-2">
+                        <Link href={`/admin/products/${product.id}`} className="hover:underline">
+                          {product.name}
+                        </Link>
+                        {STATUS_LABEL[product.status] ? (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            ({STATUS_LABEL[product.status]})
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">{product.category?.name ?? "—"}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{product.brand?.name ?? "—"}</td>
+                      <td className="px-3 py-2 text-right font-mono">
+                        Rs {Number(product.retailPrice).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={
+                            stockStatus === "OUT_OF_STOCK"
+                              ? "text-destructive"
+                              : stockStatus === "LOW_STOCK"
+                                ? "text-amber-600 dark:text-amber-500"
+                                : undefined
+                          }
+                        >
+                          {product.stockQuantity} · {STOCK_LABEL[stockStatus]}
                         </span>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">{product.category?.name ?? "—"}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{product.brand?.name ?? "—"}</td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      Rs {Number(product.retailPrice).toLocaleString()}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={stockStatus === "OUT_OF_STOCK" ? "text-destructive" : undefined}>
-                        {STOCK_LABEL[stockStatus]}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {product.status !== "DISCONTINUED" ? (
-                        <DeleteProductButton productId={product.id} />
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {product.status !== "DISCONTINUED" ? (
+                          <DeleteProductButton productId={product.id} />
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </details>
       )}
       <p className="text-xs text-muted-foreground">{result.total} products</p>
 

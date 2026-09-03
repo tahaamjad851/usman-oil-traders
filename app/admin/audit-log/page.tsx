@@ -104,7 +104,6 @@ export default async function AdminAuditLogPage({
                 <th className="px-3 py-2">Entity</th>
                 <th className="px-3 py-2">Before</th>
                 <th className="px-3 py-2">After</th>
-                <th className="px-3 py-2">IP</th>
               </tr>
             </thead>
             <tbody>
@@ -124,7 +123,6 @@ export default async function AdminAuditLogPage({
                   <td className="max-w-[16rem] truncate px-3 py-2 font-mono text-xs text-muted-foreground">
                     {preview(entry.newValue)}
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">{entry.ipAddress ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
