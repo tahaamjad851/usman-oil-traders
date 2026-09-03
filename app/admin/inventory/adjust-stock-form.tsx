@@ -3,20 +3,26 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { ProductSearch, type SearchResultProduct } from "@/components/admin/ProductSearch";
+
 export function AdjustStockForm() {
   const router = useRouter();
+  const [selectedProduct, setSelectedProduct] = useState<SearchResultProduct>();
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!selectedProduct) {
+      setError("Search for and select a product first.");
+      return;
+    }
     setIsSubmitting(true);
     setError(undefined);
 
     const form = event.currentTarget;
     const data = new FormData(form);
-    const productId = String(data.get("productId"));
-    const response = await fetch(`/api/products/${productId}/adjust-stock`, {
+    const response = await fetch(`/api/products/${selectedProduct.id}/adjust-stock`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -35,15 +41,34 @@ export function AdjustStockForm() {
     }
 
     form.reset();
+    setSelectedProduct(undefined);
     router.refresh();
   }
 
   return (
     <form className="max-w-md space-y-3 rounded-md border p-4" onSubmit={onSubmit}>
-      <label className="block text-sm font-medium">
-        Product ID
-        <input className="mt-1 w-full rounded-md border bg-background px-3 py-2" name="productId" required />
-      </label>
+      <div className="text-sm font-medium">
+        Product
+        {selectedProduct ? (
+          <div className="mt-1 flex items-center justify-between rounded-md border bg-muted/50 px-3 py-2 text-sm font-normal">
+            <span>
+              {selectedProduct.name}{" "}
+              <span className="font-mono text-xs text-muted-foreground">({selectedProduct.sku})</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedProduct(undefined)}
+              className="text-xs text-muted-foreground hover:underline"
+            >
+              Change
+            </button>
+          </div>
+        ) : (
+          <div className="mt-1">
+            <ProductSearch onSelect={setSelectedProduct} />
+          </div>
+        )}
+      </div>
       <label className="block text-sm font-medium">
         Type
         <select
@@ -54,7 +79,6 @@ export function AdjustStockForm() {
           <option value="MANUAL_ADJUSTMENT">Manual adjustment</option>
           <option value="DAMAGE">Damaged</option>
           <option value="RETURN">Return</option>
-          <option value="TRANSFER">Transfer</option>
         </select>
       </label>
       <label className="block text-sm font-medium">
@@ -82,7 +106,7 @@ export function AdjustStockForm() {
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <button
         className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !selectedProduct}
         type="submit"
       >
         {isSubmitting ? "Saving…" : "Record adjustment"}

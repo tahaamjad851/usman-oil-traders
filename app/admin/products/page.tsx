@@ -31,6 +31,11 @@ const STOCK_LABEL: Record<string, string> = {
   OUT_OF_STOCK: "Out of stock",
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  INACTIVE: "Hidden from website",
+  DISCONTINUED: "Discontinued",
+};
+
 export default async function AdminProductsPage() {
   let ctx: Awaited<ReturnType<typeof getAuthContext>>;
 
@@ -90,8 +95,10 @@ export default async function AdminProductsPage() {
                       <Link href={`/admin/products/${product.id}`} className="hover:underline">
                         {product.name}
                       </Link>
-                      {product.status !== "ACTIVE" ? (
-                        <span className="ml-2 text-xs text-muted-foreground">({product.status})</span>
+                      {STATUS_LABEL[product.status] ? (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({STATUS_LABEL[product.status]})
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{product.category?.name ?? "—"}</td>

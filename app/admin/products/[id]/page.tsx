@@ -84,6 +84,7 @@ export default async function AdminProductDetailPage({
             brandId: product.brandId,
             purchasePrice: product.purchasePrice,
             retailPrice: product.retailPrice,
+            status: product.status,
           }}
         />
       </section>

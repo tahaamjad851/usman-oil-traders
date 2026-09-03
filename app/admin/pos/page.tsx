@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { ProductSearch, type SearchResultProduct } from "@/components/admin/ProductSearch";
+
 import { PaymentPanel, type CompleteSaleDetails } from "./payment-panel";
-import { ProductSearch, type SearchResultProduct } from "./product-search";
+import { QuickAdjustPanel } from "./quick-adjust-panel";
 import { SaleTicket, type TicketItem } from "./sale-ticket";
 
 export default function PosPage() {
@@ -92,9 +94,12 @@ export default function PosPage() {
       <div className="flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Point of Sale</h1>
-          <a href="/admin/pos/history" className="text-sm text-muted-foreground hover:underline">
-            Sales history
-          </a>
+          <div className="flex items-center gap-4">
+            <QuickAdjustPanel />
+            <a href="/admin/pos/history" className="text-sm text-muted-foreground hover:underline">
+              Sales history
+            </a>
+          </div>
         </div>
         <ProductSearch onSelect={addProduct} />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}

@@ -23,12 +23,14 @@ export function ProductEditForm({
     brandId: string | null;
     purchasePrice: string;
     retailPrice: string;
+    status: string;
   };
 }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isDiscontinued = initial.status === "DISCONTINUED";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,6 +41,7 @@ export function ProductEditForm({
     const data = new FormData(event.currentTarget);
     const brandId = data.get("brandId");
     const description = data.get("description");
+    const showOnWebsite = data.get("showOnWebsite") === "on";
 
     const response = await fetch(`/api/products/${productId}`, {
       method: "PATCH",
@@ -50,6 +53,10 @@ export function ProductEditForm({
         retailPrice: data.get("retailPrice"),
         brandId: brandId || undefined,
         description: description || undefined,
+        // A discontinued product can't be reactivated from here — the checkbox is disabled and
+        // excluded from the form, so there is nothing meaningful to send; omitting the key leaves
+        // status untouched server-side rather than sending a stale/undefined value.
+        ...(isDiscontinued ? {} : { status: showOnWebsite ? "ACTIVE" : "INACTIVE" }),
       }),
     });
 
@@ -134,6 +141,22 @@ export function ProductEditForm({
             required
           />
         </label>
+      </div>
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="showOnWebsite"
+            defaultChecked={initial.status === "ACTIVE"}
+            disabled={isDiscontinued}
+          />
+          Show on website
+        </label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {isDiscontinued
+            ? "This product has been discontinued and can't be reactivated from here."
+            : "Unchecked products stay in your inventory and stock counts, but won't appear in the storefront catalog or search."}
+        </p>
       </div>
       <p className="text-xs text-muted-foreground">
         Stock quantity isn&apos;t editable here — use the{" "}

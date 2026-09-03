@@ -40,6 +40,7 @@ export function ProductForm({
     const brandId = data.get("brandId");
     const description = data.get("description");
     const stockQuantity = data.get("stockQuantity");
+    const showOnWebsite = data.get("showOnWebsite") === "on";
 
     const response = await fetch("/api/products", {
       method: "POST",
@@ -51,6 +52,7 @@ export function ProductForm({
         categoryId: data.get("categoryId"),
         purchasePrice: data.get("purchasePrice"),
         retailPrice: data.get("retailPrice"),
+        status: showOnWebsite ? "ACTIVE" : "INACTIVE",
         ...(brandId ? { brandId } : {}),
         ...(description ? { description } : {}),
         ...(stockQuantity ? { stockQuantity: Number(stockQuantity) } : {}),
@@ -169,6 +171,16 @@ export function ProductForm({
           defaultValue={0}
         />
       </label>
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" name="showOnWebsite" defaultChecked />
+          Show on website
+        </label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Unchecked products stay in your inventory and stock counts, but won&apos;t appear in the storefront
+          catalog or search.
+        </p>
+      </div>
       <label className="block text-sm font-medium">
         Image (optional — JPEG, PNG, or WebP)
         <input
